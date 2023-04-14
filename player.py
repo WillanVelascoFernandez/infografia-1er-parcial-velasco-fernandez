@@ -2,6 +2,8 @@ import arcade
 
 
 class Player(arcade.SpriteSolidColor):
+    """Clase para crear a un sprite jugador"""
+
     def __init__(self, width, hight, color, center_x, center_y):
         super().__init__(width, hight, color)
         self.center_x = center_x
@@ -10,15 +12,19 @@ class Player(arcade.SpriteSolidColor):
         self.score = 0
 
     def move_up(self, delta_time):
+        """Función para mover hacia arriba al jugador"""
         self.center_y += self.speed * delta_time
 
     def move_down(self, delta_time):
+        """Función para mover hacia abajo al jugador"""
         self.center_y -= self.speed * delta_time
 
     def colision_wall(self, wall):
+        """Funcion si detecta si golpea contra un sprite pared"""
         if self.collides_with_sprite(wall):
             return True
         return False
 
     def aumentar_score(self):
+        """Función para aumentar el score del jugador"""
         self.score += 1
