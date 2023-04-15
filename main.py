@@ -1,5 +1,5 @@
-import random
 import arcade
+import pymunk
 from pared import Pared
 from pelota import Pelota
 from player import Player
@@ -15,6 +15,7 @@ class TransformWindow(arcade.Window):
         """Constructor en el cual se inicializan algunas variables"""
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         arcade.set_background_color(arcade.color.BLACK)
+        self.space = None
         self.sprites = None
         self.paredes = None
         self.pared_arriba = None
@@ -34,6 +35,8 @@ class TransformWindow(arcade.Window):
         Función para instanciar variables y crear nuevas
         Utilizado para reiniciar el juego
         """
+        self.space = pymunk.Space()
+        self.space.gravity = (0, 0)
         self.sprites = arcade.SpriteList()
         self.pelotas = arcade.SpriteList()
         self.paredes = arcade.SpriteList()
@@ -41,38 +44,34 @@ class TransformWindow(arcade.Window):
         self.players = arcade.SpriteList()
 
         self.pared_arriba = Pared(SCREEN_WIDTH-100, 5, arcade.color.RED,
-                                  (SCREEN_WIDTH/2), (SCREEN_HEIGHT - 80))
+                                  (SCREEN_WIDTH/2), (SCREEN_HEIGHT - 80), self.space)
         self.paredes.append(self.pared_arriba)
         self.sprites.append(self.pared_arriba)
 
         self.pared_abajo = Pared(SCREEN_WIDTH-100, 5,
-                                 arcade.color.RED, (SCREEN_WIDTH/2), (50))
+                                 arcade.color.RED, (SCREEN_WIDTH/2), (50), self.space)
         self.paredes.append(self.pared_abajo)
         self.sprites.append(self.pared_abajo)
 
         self.goal_izquierda = Pared(
-            5, (SCREEN_HEIGHT-80-50), arcade.color.BLUE, (50), (((SCREEN_HEIGHT-80)+50)/2))
+            5, (SCREEN_HEIGHT-80-50), arcade.color.BLUE, (50), (((SCREEN_HEIGHT-80)+50)/2), self.space)
         self.sprites.append(self.goal_izquierda)
 
         self.goal_derecha = Pared(5, (SCREEN_HEIGHT-80-50), arcade.color.BLUE,
-                                  (SCREEN_WIDTH-50), (((SCREEN_HEIGHT-80)+50)/2))
+                                  (SCREEN_WIDTH-50), (((SCREEN_HEIGHT-80)+50)/2), self.space)
         self.sprites.append(self.goal_derecha)
 
         self.player1 = Player(30, 100, arcade.color.GREEN,
-                              80, (((SCREEN_HEIGHT-80)+50)/2))
+                              80, (((SCREEN_HEIGHT-80)+50)/2), self.space)
         self.players.append(self.player1)
         self.sprites.append(self.player1)
 
         self.player2 = Player(30, 100, arcade.color.GREEN,
-                              (SCREEN_WIDTH-80), (((SCREEN_HEIGHT-80)+50)/2))
+                              (SCREEN_WIDTH-80), (((SCREEN_HEIGHT-80)+50)/2), self.space)
         self.players.append(self.player2)
         self.sprites.append(self.player2)
 
-        self.pelota = Pelota("sprites/disco.png", 0.08, SCREEN_WIDTH/2,
-                             ((SCREEN_HEIGHT-80)+50)/2)
-
-        self.pelotas.append(self.pelota)
-        self.sprites.append(self.pelota)
+        self.new_pelota()
 
     def on_draw(self):
         """
@@ -120,10 +119,11 @@ class TransformWindow(arcade.Window):
 
     def on_update(self, delta_time):
         """
-        Función de arcade que se ejecutara a cada frame
+        Función de arcade que se ejecutara a cada frame para actualizar datos
         Utiliza funciones para mover al jugador 1 y 2
         y actualiza los sprites de la lista sprites
         """
+        self.space.step(1 / 60.0)
         self.move_player1(delta_time)
         self.move_player2(delta_time)
         self.collisions_pelota()
@@ -150,28 +150,29 @@ class TransformWindow(arcade.Window):
     def collisions_pelota(self):
         """
         Función para detectar las distintas colisiones de las pelotas
-        Colisión con las paredes de arriba y abajo
-        Colisión con las paredes/goals de la izquierda y derecha
+
+        Colisión con los goals de la izquierda y derecha
              -Poder aumentar el score cuando toda un goal
              -Elimina pelota y crea una nueva cuando toca un goal
 
         """
         for pelota in self.pelotas:
-            pelota.change_direction_y(self.paredes)
-            pelota.change_direction_x(self.players)
+
             if (pelota.goal(self.goal_izquierda)):
                 self.player1.aumentar_score()
+                self.space.remove(pelota.shape, pelota.body)
                 pelota.remove_from_sprite_lists()
                 self.new_pelota()
             if (pelota.goal(self.goal_derecha)):
                 self.player2.aumentar_score()
+                self.space.remove(pelota.shape, pelota.body)
                 pelota.remove_from_sprite_lists()
                 self.new_pelota()
 
     def new_pelota(self):
         """Esta función crea un sprite pelota llamando a la clase Pelota y la agrega a dos listas de sprites"""
         self.pelota = Pelota("sprites/disco.png", 0.08, SCREEN_WIDTH/2,
-                             ((SCREEN_HEIGHT-80)+50)/2)
+                             ((SCREEN_HEIGHT-80)+50)/2, self.space)
 
         self.pelotas.append(self.pelota)
         self.sprites.append(self.pelota)
@@ -189,6 +190,9 @@ class TransformWindow(arcade.Window):
         if (key == arcade.key.R):
             self.setup()
         if (key == arcade.key.T):
+
+            self.space.remove(
+                self.pelotas[0].shape, self.pelotas[0].body)
             self.pelotas[0].remove_from_sprite_lists()
 
         self.keys_pressed.add(key)
